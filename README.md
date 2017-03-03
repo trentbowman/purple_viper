@@ -134,17 +134,17 @@ Return to `http://ec2-site-1.us-west-2.compute.amazonaws.com:8091` if not alread
 
 Spring Data needs one additional view to do a `findAll` operation. Go to the `assets` bucket and create a view with the following properties:
 
-Design Document Name: `\_design/dev_assets`
-View Name: `all`
-Function:
-
-    function (doc, meta) {
-        if (doc._class == "org.trentbowman.purple_viper.models.Asset") {
-	    emit(meta.id, null);
-	  }
-	}
-
-Reduce: `_count`
+* Design Document Name: `\_design/dev_assets`
+* View Name: `all`
+* Function:
+```javascript
+function (doc, meta) {
+    if (doc._class == "org.trentbowman.purple_viper.models.Asset") {
+        emit(meta.id, null);
+    }
+}
+```
+* Reduce: `_count`
 
 Then, publish the view.
 
