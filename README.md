@@ -38,12 +38,12 @@ An `asset` is modeled as a single JSON document, decribed here in JSON Schema:
 		},
 		"name": {
 			"type": "string"
-		}
+		},
 		"notes": {
 			"type": "array",
 			"items": { "type": { "$ref": "#/definitions/note" }
 		}
-	}
+	},
 	"definitions": {
 		"note": {
 			"title": "Note",
