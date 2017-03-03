@@ -49,19 +49,25 @@ public class AssetsController {
 
   @GetMapping("/{id}")
   public Asset retrieveAsset(@PathVariable String id) {
-    return assetRepository.findOne(id);
+    Asset asset = assetRepository.findOne(id);
+    if (asset == null) { throw new AssetNotFoundException(id); }
+    return asset;
   }
 
   @DeleteMapping("/{id}")
   @ResponseStatus(HttpStatus.OK)
   public void deleteAsset(@PathVariable String id) {
-    // Asset asset = assetRepository.findOne(id);
-    assetRepository.delete(id);
+    Asset asset = assetRepository.findOne(id);
+    if (asset == null) { throw new AssetNotFoundException(id); }
+    
+    assetRepository.delete(asset);
   }
 
   @PostMapping("/{assetId}/notes")
   public Note createNote(@PathVariable String assetId, @RequestBody Note note) {
-    Asset asset = assetRepository.findOne(assetId); // Might fail
+    Asset asset = assetRepository.findOne(assetId);
+    if (asset == null) { throw new AssetNotFoundException(assetId); }
+
     asset.addNote(note);
     assetRepository.save(asset);
     return note;
