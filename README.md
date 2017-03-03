@@ -23,8 +23,9 @@ Couchbase appears to fulfill the most difficult requirement, that of cross-site 
 
 ### Data Model (simple)
 
-An `asset` is modeled as a single JSON document:
+An `asset` is modeled as a single JSON document, decribed here in JSON Schema:
 
+```json
 {
 	"title": "Asset",
 	"type": "object",
@@ -54,19 +55,17 @@ An `asset` is modeled as a single JSON document:
 			}		
 		}
 	}
-}	
-	
+}
+```
+
 ### Conflict resolution
 
-* Newest version wins. `uri`, `name`, and `notes` collection of the old version are lost.
-** There is no semantic reason why we couldn't merge the two `notes` collections, but is technically infeasible given the chosen data model and how Couchbase automatically resolves conflicts
+#### Simple design (as implemented)
+Newest version wins. `uri`, `name`, and `notes` collection of the old asset version are lost. This design is not optimal because Notes created on one site can be completely lost due to a "newer" change to one of the Asset fields or the Notes list on another site.
 
+#### Better design (theoretical)
 
-* An ‘asset’ has two fields ­ ‘uri’ and ‘name’ ­ name being a human readable label 
-* All assets in the organization are identified by a URI, eg: myorg://users/tswift identifies a user record 
-* Web services must be available at multiple physical sites 
-* If the network is segmented between sites, service must remain available at each site 
-* Upon restoration of network connectivity between sites, all changes must be resolved to deliver a consistent view of the data 
+There is no semantic reason why we couldn't merge the two `notes` collections, but then each Note would need to be stored as a separate document, yielding another set of engineering challenges. (How to retreive the related Notes for an Asset, orphaned assets, etc.)
 
 ## REST API
 
@@ -74,18 +73,14 @@ An `asset` is modeled as a single JSON document:
 
 Returns an array of all assets.
 
-```
-$ curl GET http://localhost:8080/assets
-```
+    $ curl GET http://localhost:8080/assets
 
 ### GET /assets/{id}
 
 Returns a specific asset with the given id, including notes.
 
-```
-$ curl http://localhost:8080/assets/b6a94d36-b6b6-4f20-a176-cfd99161e421
-{"id":"b6a94d36-b6b6-4f20-a176-cfd99161e421","uri":"asset://media/vhs","name":"VHS Tapes","notes":[{"text":"low on stock, order more"}]}
-```
+    $ curl http://localhost:8080/assets/b6a94d36-b6b6-4f20-a176-cfd99161e421
+    > {"id":"b6a94d36-b6b6-4f20-a176-cfd99161e421","uri":"asset://media/vhs","name":"VHS Tapes","notes":[{"text":"low on stock, order more"}]}
 
 ### POST /assets
 
@@ -93,22 +88,20 @@ Creates a new asset with the given uri and name.
 
 
     $ curl -X POST http://localhost:8080/assets -H "Content-Type: application/json" -d '{"uri":"asset://media/vhs", "name":"VHS Tapes"}'
-    {"id":"b6a94d36-b6b6-4f20-a176-cfd99161e421","uri":"asset://media/vhs","name":"VHS Tapes","notes":nil]}
+    > {"id":"b6a94d36-b6b6-4f20-a176-cfd99161e421","uri":"asset://media/vhs","name":"VHS Tapes","notes":nil]}
 
 ### DELETE /assets/{id}
 
 Deletes an asset and its notes.
-```
-$ curl -X DELETE http://localhost:8080/b6a94d36-b6b6-4f20-a176-cfd99161e421
-```
+
+    $ curl -X DELETE http://localhost:8080/b6a94d36-b6b6-4f20-a176-cfd99161e421
+
 ### POST /assets/{id}/notes
 
-Adds a note to an existing asset.
+Adds a note to an existing asset. Returns the created note.
 
-```
-$ curl -X POST http://localhost:8080/assets/b6a94d36-b6b6-4f20-a176-cfd99161e421/notes -H "Content-Type: application/json" -d '{"text":"low on stock, order more"}'
-{"text":"low on stock, order more"}
-```
+    $ curl -X POST http://localhost:8080/assets/b6a94d36-b6b6-4f20-a176-cfd99161e421/notes -H "Content-Type: application/json" -d '{"text":"low on stock, order more"}'
+    > {"text":"low on stock, order more"}
 
 ## Setup
 
@@ -118,21 +111,26 @@ Couchbase is required for development and can be run locally, but since at least
 
 #### A Single Instance
 
-An easy (but possibly not cheap) path in AWS is to use one of the official AMIs in the Marketplace. Go to https://aws.amazon.com/marketplace/pp/B011W4I8ZG?qid=1488550519402&sr=0-3&ref_=srh_res_product_title and go through the 1-Click Launch process to start up your instance. Pick the smallest instance type possible. You will want to precreate a security group and SSL certificate as it will be convenient to reuse them for the second instance. Default usernames and passwords are used throughout this example setup, so setting a restrictive firewall is a good precaution. Couchbase uses a wide range of ports so they can either be listed out individually, or whitelist them all (1-64000).
+An easy (but not cheap) path in AWS is to use one of the official AMIs in the Marketplace. Browse to https://aws.amazon.com/marketplace/pp/B011W4I8ZG?qid=1488550519402&sr=0-3&ref_=srh_res_product_title and go through the 1-Click Launch process to start up your instance.
+* Pick the smallest instance type possible.
+* Precreate a security group and SSL certificate as it will be convenient to reuse them for the second instance.
+* Default usernames and passwords are used throughout this example setup, so setting a restrictive firewall is a good precaution. Couchbase uses a wide range of ports so they can either be listed out individually, or whitelist them all (1-64000).
 
 Name the EC2 instance `site-1`.
 
-After the instance launches, one small change needs to be made in order to fix an issue with hostname binding. `ssh` into the instance and edit `/etc/hosts`, adding the following line:
+After the instance launches, one small change needs to be made in order to fix an issue with hostname binding. Assuming that the EC2 instance has a public domain name of `ec2-site-1.us-west-2.compute.amazonaws.com` and the SSL key is stored locally at  `~/.ssh/couchbase-key.pem`...
+
+    local> ssh -i ~/.ssh/couchbase-key.pem ec2-user@ec2-site-1.us-west-2.compute.amazonaws.com
+    ...
+    couchbase> sudo nano /etc/hosts
+    
+and add the following line:
 
     127.0.0.1   ec2-site-1.us-west-2.compute.amazonaws.com
 
-where `ec2-site-1.us-west-2.compute.amazonaws.com` is the public DNS of the instance.
+Next, browse to `http://ec2-site-1.us-west-2.compute.amazonaws.com:8091` to finish Couchbase setup. Lower the memory settings until they fit in your instance type. For hostname, use the instance's public DNS (`ec2-site-1.us-west-2.compute.amazonaws.com`), **do not** use `127.0.0.1` or `localhost`. Finish the setup with default values.
 
-Next, go to `http://ec2-site-1.us-west-2.compute.amazonaws.com:8091` to finish Couchbase setup. Lower the memory settings until they fit in your instance type. For hostname, use the instance's public DNS (`ec2-site-1.us-west-2.compute.amazonaws.com`), do not use `127.0.0.1` or `localhost`.
-
-Now that the Couchbase instance is up and running, we're almost there! If asked for a username and password, the defaults are `Administrator` and `password`.
-
-Create a new bucket named `assets` with a password of `password`.
+Return to `http://ec2-site-1.us-west-2.compute.amazonaws.com:8091` if not already there. (If asked for a username and password, the defaults are `Administrator` and `password`.) Create a new bucket named `assets` with a password of `password`.
 
 Spring Data needs one additional view to do a `findAll` operation. Go to the `assets` bucket and create a view with the following properties:
 
@@ -156,7 +154,9 @@ Repeat the steps above to start another Couchbase instance named `site-2`. Edit 
 
 ### REST Service
 
-The REST frontend is a Spring Boot application using Spring Data to perform CRUD operations on Couchbase. Two instances are needed to simulate the two sites. Launch the first with
+The REST frontend is a Spring Boot application using Spring Data to perform CRUD operations on Couchbase. A Java 8 SDK and Maven install are required.
+
+Two instances are needed to simulate the two sites. Launch the first with
 
     SERVER_PORT=8080 COUCHBASE_CLUSTER_IP=ec2-site-1.us-west-2.compute.amazonaws.com mvn spring-boot:run
 
