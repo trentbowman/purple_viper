@@ -139,7 +139,7 @@ Spring Data needs one additional view to do a `findAll` operation. Go to the `as
 * Function:
 ```javascript
 function (doc, meta) {
-    if (doc._class == "org.trentbowman.purple_viper.models.Asset") {
+    if (doc._class == "org.trentbowman.purple_viper.domain.Asset") {
         emit(meta.id, null);
     }
 }
