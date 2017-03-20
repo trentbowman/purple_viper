@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import org.trentbowman.purple_viper.web.AssetNotFoundException;
+import org.trentbowman.purple_viper.web.AssetNotValidException;
 
 @ControllerAdvice
 public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionHandler {
@@ -16,9 +17,18 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
   @ExceptionHandler(value = { AssetNotFoundException.class })
   protected ResponseEntity<Object> handleNotFound(RuntimeException ex, WebRequest request) {
     // TODO: possible JSON-injection in exception message
-    String bodyOfResponse = "{\"error\":\"NOT_FOUND\", \"message\": \"" + ex.getMessage() + "\"";
+    String bodyOfResponse = "{\"error\":\"NOT_FOUND\", \"message\": \"" + ex.getMessage() + "\"}";
     HttpHeaders httpHeaders = new HttpHeaders();
     httpHeaders.setContentType(MediaType.APPLICATION_JSON);
     return handleExceptionInternal(ex, bodyOfResponse, httpHeaders, HttpStatus.NOT_FOUND, request);
+  }
+  
+  @ExceptionHandler(value = { AssetNotValidException.class })
+  protected ResponseEntity<Object> handleNotValid(RuntimeException ex, WebRequest request) {
+    // TODO: possible JSON-injection in exception message
+    String bodyOfResponse = "{\"error\":\"NOT_VALID\", \"message\": \"" + ex.getMessage() + "\"}";
+    HttpHeaders httpHeaders = new HttpHeaders();
+    httpHeaders.setContentType(MediaType.APPLICATION_JSON);
+    return handleExceptionInternal(ex, bodyOfResponse, httpHeaders, HttpStatus.BAD_REQUEST, request);
   }
 }

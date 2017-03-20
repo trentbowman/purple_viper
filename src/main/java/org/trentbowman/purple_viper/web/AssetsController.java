@@ -6,7 +6,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.validation.Valid;
+
 import org.springframework.http.HttpStatus;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -42,7 +45,10 @@ public class AssetsController {
   }
 
   @PostMapping
-  public Asset createAsset(@RequestBody Asset asset) {
+  public Asset createAsset(@Valid @RequestBody Asset asset, BindingResult bindingResult) {
+    if (bindingResult.hasErrors()) {
+      throw AssetNotValidException.fromBindingResult(bindingResult);
+    }
     asset.setId(UUID.randomUUID().toString());
     return assetRepository.save(asset);
   }

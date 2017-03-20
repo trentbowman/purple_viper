@@ -3,7 +3,9 @@ package org.trentbowman.purple_viper.domain;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.hibernate.validator.constraints.NotBlank;
 import org.springframework.data.couchbase.core.mapping.Document;
+import org.trentbowman.purple_viper.validator.constraints.URI;
 
 import com.couchbase.client.java.repository.annotation.Field;
 import com.couchbase.client.java.repository.annotation.Id;
@@ -15,9 +17,12 @@ public class Asset {
   private String id;
 
   @Field
+  @NotBlank(message="uri is required")
+  @URI(scheme="asset", message="uri must be a valid URI with a scheme of \"asset\"")
   private String uri;
 
   @Field
+  @NotBlank(message="name is required")
   private String name;
 
   @Field
